@@ -7,16 +7,7 @@ bundle exec ruby main.rb
 
 try it out:
 
-GET http://localhost:4567/api/1/preview/:label.png
-GET http://localhost:4567/api/1/preview/:label.pdf
-POST http://localhost:4567/api/1/print/:label
-
-where :label is a `spejstore` label.id or item.short_id
-
-to test without spejstore running locally, pass:
-
-```sh
-LABELMAKER_DEBUG_JSON='{"short_id":"abcdef","name":"Some long test item","owner":"testowner"}' bundle exec ruby main.rb
-```
+GET http://localhost:4567/api/2/preview.pdf?id=abcdef&name=ItemName&owner=OptionalOwner
+POST http://localhost:4567/api/2/print?id=abcdef&name=ItemName&owner=OptionalOwner
 
 Make sure to pass either `LABELMAKER_LOCAL_PRINTER_NAME` or `LABELMAKER_IPP_PRINTER_URL`. See top of `main.rb` for all env variables available.

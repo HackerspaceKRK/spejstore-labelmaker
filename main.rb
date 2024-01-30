@@ -3,13 +3,11 @@ require 'sinatra'
 require 'prawn'
 require 'prawn/measurements'
 require 'prawn/qrcode'
-require 'excon'
 require 'json'
 require 'shellwords'
 
 include Prawn::Measurements
 
-BACKEND_URL = ENV.fetch('LABELMAKER_BACKEND_URL', 'https://inventory.hackerspace.pl/api/1/')
 CODE_PREFIX = ENV.fetch('LABELMAKER_CODE_PREFIX', 'https://inventory.hackerspace.pl/')
 
 # NOTE:
@@ -20,20 +18,18 @@ LABEL_SIZE = JSON.parse(ENV.fetch('LABELMAKER_LABEL_SIZE', '[89, 36]'))
 # NOTE: You can use either local printer or IPP printer, but not both
 LOCAL_PRINTER_NAME = ENV.fetch('LABELMAKER_LOCAL_PRINTER_NAME', 'DYMO_LabelWriter_450')
 IPP_PRINTER_URL = ENV.fetch('LABELMAKER_IPP_PRINTER_URL', '')
-DEBUG_JSON = ENV["LABELMAKER_DEBUG_JSON"]
 
-def api(uri)
-  if DEBUG_JSON
-    JSON.parse(DEBUG_JSON)
-  else
-    JSON.parse(Excon.get(BACKEND_URL + uri + "/"))
+def render_label()
+  short_id = params[:id]
+  name = params[:name]
+  owner = params[:owner]
+
+  if short_id.nil? or name.nil?
+    status 400
+    return "Missing required parameters ?id= and ?name="
   end
-end
 
-def render_label(item_or_label_id, size: LABEL_SIZE)
-  item = api("items/#{item_or_label_id}")
-
-  pdf = Prawn::Document.new(page_size: size.map { |x| mm2pt(x) },
+  pdf = Prawn::Document.new(page_size: LABEL_SIZE.map { |x| mm2pt(x) },
                             margin: [2, 2, 2, 6].map { |x| mm2pt(x) }) do
     font_families.update("DejaVuSans" => {
       normal: "fonts/DejaVuSans.ttf",
@@ -49,11 +45,11 @@ def render_label(item_or_label_id, size: LABEL_SIZE)
 
     # Right side
     bounding_box([bounds.right - qr_size, bounds.top], width: qr_size) do
-      print_qr_code CODE_PREFIX + item['short_id'], stroke: false,
+      print_qr_code CODE_PREFIX + short_id, stroke: false,
         foreground_color: '000000',
         extent: bounds.width, margin: 0, pos: bounds.top_left
 
-      owner_text = item["owner"] ? "owner: #{item['owner']}\n\n" : ""
+      owner_text = owner && !owner.empty? ? "owner: #{owner}\n\n" : ""
       metadata_text = owner_text # todo: creation date?
 
       text_box metadata_text,
@@ -62,7 +58,7 @@ def render_label(item_or_label_id, size: LABEL_SIZE)
 
     # Left side
     bounding_box(bounds.top_left, width: bounds.width - qr_size) do
-      text_box item['name'],
+      text_box name,
         size: 40, align: :center, valign: :center, width: bounds.width-10,
         inline_format: true, overflow: :shrink_to_fit, disable_wrap_by_char: true
     end
@@ -73,14 +69,14 @@ end
 
 set :bind, '0.0.0.0'
 
-get '/api/1/preview/:id.pdf' do
+get '/api/2/preview.pdf' do
   headers["Content-Type"] = "application/pdf; charset=utf8"
-  render_label params["id"]
+  render_label
 end
 
-post '/api/1/print/:id' do
+post '/api/1/print' do
   temp = Tempfile.new('labelmaker')
-  temp.write(render_label(params["id"]))
+  temp.write(render_label)
   temp.close
 
   if not LOCAL_PRINTER_NAME.empty?
