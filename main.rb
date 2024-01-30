@@ -98,9 +98,9 @@ post '/api/1/print/:id' do
   temp.close
 
   if not LOCAL_PRINTER_NAME.empty?
-    system("lpr -P #{LOCAL_PRINTER_NAME.shellescape} #{temp.path.shellescape}")
+    system("lpr -P #{LOCAL_PRINTER_NAME.shellescape} #{temp.path.shellescape}", exception: true)
   elsif not IPP_PRINTER_URL.empty?
-    system("ipptool -v -tf #{temp.path.shellescape} -d filetype=application/octet-stream -I #{IPP_PRINTER_URL.shellescape} ipptool-print-job.test")
+    system("ipptool -v -tf #{temp.path.shellescape} -d filetype=application/octet-stream -I #{IPP_PRINTER_URL.shellescape} ipptool-print-job.test", exception: true)
   else
     status 404
     return "No printer configured"

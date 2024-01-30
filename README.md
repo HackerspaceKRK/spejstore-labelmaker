@@ -19,3 +19,4 @@ to test without spejstore running locally, pass:
 LABELMAKER_DEBUG_JSON='{"short_id":"abcdef","name":"Some long test item","owner":"testowner"}' bundle exec ruby main.rb
 ```
 
+Make sure to pass either `LABELMAKER_LOCAL_PRINTER_NAME` or `LABELMAKER_IPP_PRINTER_URL`. See top of `main.rb` for all env variables available.
