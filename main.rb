@@ -10,71 +10,32 @@ require 'excon'
 require 'rmagick'
 require 'json'
 require 'zlib'
+require 'shellwords'
 
 include Prawn::Measurements
 
-# module Prawn
-#   module Text
-#     module Formatted #:nodoc:
-#       # @private
-#       class LineWrap #:nodoc:
-#         def whitespace()
-#           # Wrap by these special characters as well
-#           "&:/\\" +
-#           "\s\t#{zero_width_space()}"
-#         end
-#       end
-#     end
-#   end
-# end
+BACKEND_URL = ENV.fetch('LABELMAKER_BACKEND_URL', 'https://inventory.hackerspace.pl/api/1/')
+CODE_PREFIX = ENV.fetch('LABELMAKER_CODE_PREFIX', 'https://inventory.hackerspace.pl/')
 
-module Excon
-  class Response
-    def json!()
-      # Convenience function
-      JSON.parse(body)
-    end
-  end
-end
+# NOTE:
+# DYMO_LABEL_SIZE = [89, 36]
+# ZEBRA_LABEL_SIZE = [100, 60]
+LABEL_SIZE = JSON.parse(ENV.fetch('LABELMAKER_LABEL_SIZE', '[89, 36]'))
 
-BACKEND_URL = 'https://inventory.hackerspace.pl/api/1/'
-CODE_PREFIX = "https://inventory.hackerspace.pl/"
+# NOTE: You can use either local printer or IPP printer, but not both
+LOCAL_PRINTER_NAME = ENV.fetch('LABELMAKER_LOCAL_PRINTER_NAME', 'DYMO_LabelWriter_450')
+IPP_PRINTER_URL = ENV.fetch('LABELMAKER_IPP_PRINTER_URL', '')
+DEBUG_JSON = ENV["LABELMAKER_DEBUG_JSON"]
 
 def api(uri)
-  if ENV["DEBUG_JSON"]
-    JSON.parse(ENV["DEBUG_JSON"])
+  if DEBUG_JSON
+    JSON.parse(DEBUG_JSON)
   else
-    Excon.get(BACKEND_URL + uri + "/").json!
+    JSON.parse(Excon.get(BACKEND_URL + uri + "/"))
   end
 end
 
-def render_identicode(data, id, extent)
-  pts = [[0, 0], [0, 1], [1, 1], [1, 0], [0, 0]]
-
-  4.times do |n|
-    color = Color::HSL.from_fraction((id % 6) / 6.0, 1.0, 0.3).html[1..6]
-    id /= 6
-
-    save_graphics_state do
-      soft_mask do
-        fill_color 'ffffff'
-        polygon = [pts[n], [0.5, 0.5], pts[n+1]].map{ |v| [v[0]*bounds.height, v[1]*bounds.height] }
-        fill_polygon(*(polygon))
-      end
-
-      print_qr_code data, stroke: false,
-                          extent: extent, foreground_color: color,
-                          pos: [bounds.left, bounds.top]
-    end
-  end
-
-  fill_color '000000'
-end
-
-DYMO_LABEL_SIZE = [89, 36]
-ZEBRA_LABEL_SIZE = [100, 60]
-
-def render_label(item_or_label_id, size: DYMO_LABEL_SIZE)
+def render_label(item_or_label_id, size: LABEL_SIZE)
   item = api("items/#{item_or_label_id}")
 
   pdf = Prawn::Document.new(page_size: size.map { |x| mm2pt(x) },
@@ -135,5 +96,13 @@ post '/api/1/print/:id' do
   temp = Tempfile.new('labelmaker')
   temp.write(render_label(params["id"]))
   temp.close
-  system("lpr -P DYMO_LabelWriter_450 #{temp.path}")
+
+  if not LOCAL_PRINTER_NAME.empty?
+    system("lpr -P #{LOCAL_PRINTER_NAME.shellescape} #{temp.path.shellescape}")
+  elsif not IPP_PRINTER_URL.empty?
+    system("ipptool -v -tf #{temp.path.shellescape} -d filetype=application/octet-stream -I #{IPP_PRINTER_URL.shellescape} ipptool-print-job.test")
+  else
+    status 404
+    return "No printer configured"
+  end
 end
