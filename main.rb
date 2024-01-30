@@ -41,7 +41,11 @@ BACKEND_URL = 'https://inventory.hackerspace.pl/api/1/'
 CODE_PREFIX = "https://inventory.hackerspace.pl/"
 
 def api(uri)
-  Excon.get(BACKEND_URL + uri + "/").json!
+  if ENV["DEBUG_JSON"]
+    JSON.parse(ENV["DEBUG_JSON"])
+  else
+    Excon.get(BACKEND_URL + uri + "/").json!
+  end
 end
 
 def render_identicode(data, id, extent)
