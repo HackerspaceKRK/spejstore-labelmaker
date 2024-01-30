@@ -37,8 +37,8 @@ module Excon
   end
 end
 
-BACKEND_URL = 'https://inventory.waw.hackerspace.pl/api/1/'
-CODE_PREFIX = "HTTP://I/"
+BACKEND_URL = 'https://inventory.hackerspace.pl/api/1/'
+CODE_PREFIX = "https://inventory.hackerspace.pl/"
 
 def api(uri)
   Excon.get(BACKEND_URL + uri + "/").json!
