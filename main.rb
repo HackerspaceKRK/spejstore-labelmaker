@@ -1,15 +1,10 @@
 require 'rubygems'
 require 'sinatra'
-require 'rqrcode'
 require 'prawn'
 require 'prawn/measurements'
 require 'prawn/qrcode'
-require 'prawn-svg'
-require 'color'
 require 'excon'
-require 'rmagick'
 require 'json'
-require 'zlib'
 require 'shellwords'
 
 include Prawn::Measurements
@@ -81,15 +76,6 @@ set :bind, '0.0.0.0'
 get '/api/1/preview/:id.pdf' do
   headers["Content-Type"] = "application/pdf; charset=utf8"
   render_label params["id"]
-end
-
-get '/api/1/preview/:id.png' do
-  headers["Content-Type"] = "image/png"
-  img = Magick::ImageList.new()
-  img = img.from_blob(render_label(params["id"])){ self.density = 200 }.first
-  img.format = 'png'
-  img.background_color = 'white'
-  img.to_blob
 end
 
 post '/api/1/print/:id' do
