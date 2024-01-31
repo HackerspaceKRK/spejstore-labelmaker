@@ -15,9 +15,10 @@ CODE_PREFIX = ENV.fetch('LABELMAKER_CODE_PREFIX', 'https://inventory.hackerspace
 # ZEBRA_LABEL_SIZE = [100, 60]
 LABEL_SIZE = JSON.parse(ENV.fetch('LABELMAKER_LABEL_SIZE', '[89, 36]'))
 
-# NOTE: You can use either local printer or IPP printer, but not both
-LOCAL_PRINTER_NAME = ENV.fetch('LABELMAKER_LOCAL_PRINTER_NAME', 'DYMO_LabelWriter_450')
+# NOTE: You can use only one of these: local printer, IPP printer, or printservant
+LOCAL_PRINTER_NAME = ENV.fetch('LABELMAKER_LOCAL_PRINTER_NAME', '')
 IPP_PRINTER_URL = ENV.fetch('LABELMAKER_IPP_PRINTER_URL', '')
+PRINTSERVANT_URL = ENV.fetch('LABELMAKER_PRINTSERVANT_URL', '')
 
 def render_label()
   short_id = params[:id]
@@ -87,6 +88,9 @@ post '/api/2/print' do
     system("lpr -P #{LOCAL_PRINTER_NAME.shellescape} #{temp.path.shellescape}", exception: true)
   elsif not IPP_PRINTER_URL.empty?
     system("ipptool -v -tf #{temp.path.shellescape} -d filetype=application/octet-stream -I #{IPP_PRINTER_URL.shellescape} ipptool-print-job.test", exception: true)
+  elsif not PRINTSERVANT_URL.empty?
+    # lmao
+    system("curl -i -XPOST --data-binary '@#{temp.path.shellescape}' #{PRINTSERVANT_URL.shellescape}", exception: true)
   else
     status 404
     return "No printer configured"
