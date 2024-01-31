@@ -69,12 +69,16 @@ end
 
 set :bind, '0.0.0.0'
 
+get '/api/2/health' do
+  "I'm cool"
+end
+
 get '/api/2/preview.pdf' do
   headers["Content-Type"] = "application/pdf; charset=utf8"
   render_label
 end
 
-post '/api/1/print' do
+post '/api/2/print' do
   temp = Tempfile.new('labelmaker')
   temp.write(render_label)
   temp.close
