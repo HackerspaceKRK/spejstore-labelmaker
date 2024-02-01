@@ -5,6 +5,8 @@ require 'prawn/measurements'
 require 'prawn/qrcode'
 require 'json'
 require 'shellwords'
+require 'uri'
+require 'net/http'
 
 include Prawn::Measurements
 
@@ -18,7 +20,11 @@ LABEL_SIZE = JSON.parse(ENV.fetch('LABELMAKER_LABEL_SIZE', '[89, 36]'))
 # NOTE: You can use only one of these: local printer, IPP printer, or printservant
 LOCAL_PRINTER_NAME = ENV.fetch('LABELMAKER_LOCAL_PRINTER_NAME', '')
 IPP_PRINTER_URL = ENV.fetch('LABELMAKER_IPP_PRINTER_URL', '')
-PRINTSERVANT_URL = ENV.fetch('LABELMAKER_PRINTSERVANT_URL', '')
+WEBHOOK = ENV.fetch('LABELMAKER_WEBHOOK', '') # printservant-compatible print url
+
+if LOCAL_PRINTER_NAME.empty? and IPP_PRINTER_URL.empty? and WEBHOOK.empty?
+  raise "No printer configured"
+end
 
 def render_label()
   short_id = params[:id]
@@ -80,6 +86,13 @@ get '/api/2/preview.pdf' do
 end
 
 post '/api/2/print' do
+  if not WEBHOOK.empty?
+    uri = URI(WEBHOOK)
+    reponse = Net::HTTP.post(uri, render_label)
+    puts reponse.body
+    return
+  end
+
   temp = Tempfile.new('labelmaker')
   temp.write(render_label)
   temp.close
@@ -88,11 +101,5 @@ post '/api/2/print' do
     system("lpr -P #{LOCAL_PRINTER_NAME.shellescape} #{temp.path.shellescape}", exception: true)
   elsif not IPP_PRINTER_URL.empty?
     system("ipptool -v -tf #{temp.path.shellescape} -d filetype=application/octet-stream -I #{IPP_PRINTER_URL.shellescape} ipptool-print-job.test", exception: true)
-  elsif not PRINTSERVANT_URL.empty?
-    # lmao
-    system("curl -i -XPOST --data-binary '@#{temp.path.shellescape}' #{PRINTSERVANT_URL.shellescape}", exception: true)
-  else
-    status 404
-    return "No printer configured"
   end
 end
