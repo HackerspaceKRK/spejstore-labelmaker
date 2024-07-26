@@ -37,7 +37,7 @@ def render_label()
   end
 
   pdf = Prawn::Document.new(page_size: LABEL_SIZE.map { |x| mm2pt(x) },
-                            margin: [2, 2, 2, 6].map { |x| mm2pt(x) }) do
+                            margin: [0, 0, 0, 0].map { |x| mm2pt(x) }) do
     font_families.update("DejaVuSans" => {
       normal: "fonts/DejaVuSans.ttf",
       italic: "fonts/DejaVuSans-Oblique.ttf",
