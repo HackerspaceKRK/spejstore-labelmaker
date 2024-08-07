@@ -15,7 +15,7 @@ CODE_PREFIX = ENV.fetch('LABELMAKER_CODE_PREFIX', 'https://inventory.hackerspace
 # NOTE:
 # DYMO_LABEL_SIZE = [89, 36]
 # ZEBRA_LABEL_SIZE = [100, 60]
-LABEL_SIZE = JSON.parse(ENV.fetch('LABELMAKER_LABEL_SIZE', '[89, 36]'))
+LABEL_SIZE = JSON.parse(ENV.fetch('LABELMAKER_LABEL_SIZE', '[80, 40]'))
 
 # NOTE: You can use only one of these: local printer, IPP printer, or printservant
 LOCAL_PRINTER_NAME = ENV.fetch('LABELMAKER_LOCAL_PRINTER_NAME', '')
